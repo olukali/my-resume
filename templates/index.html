@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title> Serge Smith - DevOps Portfolio</title>
+    
+    <!-- PWA Support -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="John Doe Portfolio">
+    
+    <!-- Font Preloading -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    
+    <style>
+        :root {
+            --primary: #4cc9f0;
+            --secondary: #4361ee;
+            --accent: #3a86ff;
+            --dark: #0d1b2a;
+            --darker: #1b263b;
+            --light: #f8f9fa;
+            --muted: #adb5bd;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--dark), var(--darker));
+            color: var(--light);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            padding: 2.5rem;
+            background: var(--card-bg);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: var(--transition);
+        }
+
+        .header:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            margin: 0.5rem 0;
+            font-size: 1.1rem;
+            color: var(--muted);
+        }
+
+        /* Section Styles */
+        .section {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+        }
+
+        .section:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        h2 {
+            color: var(--accent);
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            position: relative;
+            padding-bottom: 0.5rem;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), transparent);
+            border-radius: 3px;
+        }
+
+        /* Experience Section */
+        .experience-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .experience-item:hover {
+            background: rgba(255, 255, 255, 0.07);
+            transform: translateY(-3px);
+        }
+
+        .experience-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .experience-title {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: var(--light);
+            margin-right: 1rem;
+        }
+
+        .experience-date {
+            color: var(--muted);
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        li {
+            margin-bottom: 0.8rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        li::before {
+            content: '▹';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        /* Skills Section */
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1.5rem;
+        }
+
+        .skill {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .skill:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Projects Section */
+        .project-item {
+            margin-bottom: 2rem;
+        }
+
+        .project-item strong {
+            display: block;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        /* Download Button */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.8rem 1.8rem;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            border: none;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(90deg, var(--secondary), var(--accent));
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .container {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem 1rem;
+            }
+            
+            .header {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .experience-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>John Doe</h1>
+            <p>DevOps Engineer</p>
+            <p>john.doe@example.com</p>
+            <p>Total Experience: 8+ Years</p>
+        </header>
+
+        <section class="section summary">
+            <h2>Professional Summary</h2>
+            <p>Experienced DevOps Engineer with over 8 years in automating, optimizing, and managing cloud infrastructure. Proficient in Docker, Kubernetes, AWS, Terraform, and bash scripting, with a proven track record of implementing CI/CD pipelines and container orchestration. Skilled in Linux server administration and infrastructure as code, delivering scalable and secure solutions.</p>
+        </section>
+
+        <section class="section">
+            <h2>Education</h2>
+            <div class="education-item">
+                <strong>B.S. in Computer Science</strong> - University of Tech City<br>
+                <small>2011-2015</small>
+            </div>
+            <div class="education-item">
+                <strong>Certified Kubernetes Administrator (CKA)</strong> - Linux Foundation<br>
+                <small>2019</small>
+            </div>
+            <div class="education-item">
+                <strong>AWS Certified Solutions Architect</strong> - Amazon Web Services<br>
+                <small>2020</small>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Skills</h2>
+            <div class="skills-list">
+                <span class="skill">Docker</span>
+                <span class="skill">Kubernetes</span>
+                <span class="skill">AWS</span>
+                <span class="skill">CI/CD</span>
+                <span class="skill">Linux</span>
+                <span class="skill">Terraform</span>
+                <span class="skill">Bash</span>
+                <span class="skill">Jenkins</span>
+                <span class="skill">Git</span>
+                <span class="skill">Python</span>
+                <span class="skill">Ansible</span>
+                <span class="skill">Prometheus</span>
+                <span class="skill">Grafana</span>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Experience</h2>
+            <article class="experience-item">
+                <div class="experience-header">
+                    <div class="experience-title">Nexlify Tech - DevOps Engineer</div>
+                    <div class="experience-date">2021-Present</div>
+                </div>
+                <ul>
+                    <li>Automated deployments using Jenkins and Docker for microservices</li>
+                    <li>Wrote Terraform scripts to provision AWS infrastructure (EC2, S3, RDS)</li>
+                    <li>Managed Kubernetes clusters on AWS EKS for scalable applications</li>
+                    <li>Developed bash scripts for log rotation and cleanup on Linux servers</li>
+                    <li>Configured AWS ECS for container orchestration of production apps</li>
+                    <li>Implemented CI/CD pipelines with GitHub Actions for zero-downtime deployments</li>
+                </ul>
+            </article>
+            
+            <article class="experience-item">
+                <div class="experience-header">
+                    <div class="experience-title">CloudWave Solutions - Cloud Engineer</div>
+                    <div class="experience-date">2018-2021</div>
+                </div>
+                <ul>
+                    <li>Designed AWS architecture for scalable and fault-tolerant applications</li>
+                    <li>Used Terraform to deploy EC2 instances with auto-scaling groups</li>
+                    <li>Wrote bash scripts for automated server setup and configuration</li>
+                    <li>Managed Docker containers on AWS ECS for stateless applications</li>
+                    <li>Configured AWS CloudWatch for monitoring and alerting on metrics</li>
+                    <li>Automated S3 bucket creation and policies with Terraform</li>
+                </ul>
+            </article>
+        </section>
+
+        <section class="section">
+            <h2>Projects</h2>
+            <article class="project-item">
+                <strong>CI/CD Pipeline</strong>
+                <p>Built an automated deployment system using Jenkins, Docker, and bash scripts. Integrated with AWS CodePipeline for zero-downtime deployments. Automated the build, test, and deployment process for microservices architecture.</p>
+            </article>
+            <article class="project-item">
+                <strong>Container Orchestration</strong>
+                <p>Implemented Kubernetes clusters on AWS EKS using Terraform for infrastructure provisioning. Wrote bash scripts to automate scaling and monitoring of pods. Configured Linux nodes for optimal performance with Docker runtime.</p>
+            </article>
+        </section>
+
+        <footer class="section">
+            <a href="/download-pdf" class="download-btn">Download PDF Resume</a>
+        </footer>
+    </div>
+</body>
+</html>
