@@ -19,6 +19,10 @@ jobs:
     - name: Build latest
       run: docker build . --file Dockerfile --tag my-image-name
     - name: Login to Docker hub
-      run: docker login -u ${{secrets.REGISTRY_USERNAME}} -p ${{secrets.REISTRY_PASS}}
+      run: docker login -u ${{secrets.REGISTRY_USERNAME}} -p ${{secrets.REGISTRY_PASS}}
     - name: Tag image
       run: docker tag my-image-name:${{github.run_number}} ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
+    - name: Push Image
+      run: docker push ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
+      
+
