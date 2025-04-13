@@ -25,5 +25,20 @@ jobs:
     - name: Push Image
       run: docker push ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
       
-
-
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: SSH to Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host:
+          host:54.166.207.11
+        username: ec2-user
+        key: ${{secrets.KEY }}
+        script: 
+          docker stop resume || echo ""
+          docker rm resume || echo ""
+          docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
+          
+        
