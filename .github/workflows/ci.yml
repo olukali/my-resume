@@ -40,6 +40,7 @@ jobs:
         script: 
           docker stop resume || echo ""
           docker rm resume || echo ""
-          docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:7 ${{github.run_number}}
+          docker run -d --name resume -p 8080:5001 your-docker-image:7
+          
           
         
