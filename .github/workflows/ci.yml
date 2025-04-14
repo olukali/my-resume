@@ -36,10 +36,9 @@ jobs:
           host:54.166.207.11
         username: ec2-user
         key: ${{secrets.KEY }}
-        port: 22
         script: 
           docker stop resume || echo ""
           docker rm resume || echo ""
-          docker run -d --name resume -p 8080:5001 yourdockerhubusername/my-image-name:12
+          docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
           
         
