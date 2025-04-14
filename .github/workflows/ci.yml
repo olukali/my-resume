@@ -33,7 +33,7 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       with:
         host:
-          host:54.166.207.11
+          host:54.209.57.148
         username: ec2-user
         key: ${{secrets.KEY }}
         script: 
