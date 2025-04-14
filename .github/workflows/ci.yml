@@ -32,14 +32,14 @@ jobs:
     - name: SSH to Server
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: 54.166.207.11
-        username: your_ssh_user
-        key: ${{ secrets.KEY }}
-        port: 22   # <— explicitly specify the port
-        script: |
-          docker stop resume || true
-          docker rm resume || true
-          docker run -d --name resume -p 8080:5001 your-docker-image:7
-  
+        host:
+          host:54.166.207.11
+        username: ec2-user
+        key: ${{secrets.KEY }}
+        port: 22
+        script: 
+          docker stop resume || echo ""
+          docker rm resume || echo ""
+          docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
           
         
