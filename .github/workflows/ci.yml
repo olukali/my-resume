@@ -32,13 +32,12 @@ jobs:
     - name: SSH to Server
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host:
-          host:54.209.57.148
+        host: 54.209.57.148
         username: ec2-user
-        key: ${{secrets.KEY }}
-        script: 
-          docker stop resume || echo ""
-          docker rm resume || echo ""
-          docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
+        key: ${{secrets.KEY}}
+        script: |
+            docker stop resume || echo ""
+            docker rm resume || echo ""
+            docker run -d --name resume -p 8080:5001 ${{secrets.REGISTRY_USERNAME}}/my-image-name:${{github.run_number}}
           
         
