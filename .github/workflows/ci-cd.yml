@@ -9,6 +9,8 @@ on:
 env:
   AWS_REGION: us-east-1
   AWS_ROLE: ${{ secrets.AWS_ACTION_ROLE }}
+  ECR_REPO_NAME: dev
+  IMAGE_TAG: ${{ github.run_number }}
     
 jobs:
   build:
@@ -24,3 +26,9 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
     - name: Loging to ecr
       uses: aws-actions/amazon-ecr-login@v1
+      id: ecr_login
+      name: Build tag and push image
+      id: build_and_push
+      run:
+          docker build -t ${{  steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{env.IMAGE_TAG }} .
+          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{env.IMAGE_TAG }}
