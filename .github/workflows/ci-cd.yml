@@ -45,5 +45,5 @@ jobs:
           exit-code: "1"
           severity: "CRITICAL,HIGH"
       - name: Push image to ecr
-        run: 
-        docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
+        run: |
+          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
