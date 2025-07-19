@@ -36,3 +36,14 @@ jobs:
         run: |
             docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}} .
             docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
+    
+      - name: scan docker Image for Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}"  # Scans the built image
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+      - name: Push image to ecr
+        run: 
+        docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
