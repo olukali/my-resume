@@ -63,4 +63,4 @@ jobs:
             script: |
               docker stop resume || echo ""
               docker rm resume || echo ""
-              docker run -d --name resume -p 8080:5001 ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
+              docker run -d --name resume -p 8080:80 ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
