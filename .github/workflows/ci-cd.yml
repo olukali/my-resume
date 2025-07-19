@@ -2,36 +2,37 @@ name: build push and deploy image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+
 permissions:
-  contents: read
-  id-token: write
+  id-token: write 
+  contents: read 
 
 env:
   AWS_REGION: us-east-1
   AWS_ROLE: ${{ secrets.AWS_ACTION_ROLE }}
   ECR_REPO_NAME: dev
-  IMAGE_TAG: ${{ github.run_number }}
-    
+  IMAGE_TAG: ${{ github.run_number}}
+
+
 jobs:
   build:
-    runs-on: ubuntu-latest #github-hosted runner
-
+    runs-on: ubuntu-latest  # guthub runner
     steps:
-    - name: clone repo
-      uses: actions/checkout@v3
-    - name: AWS creds config
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ env.AWS_ROLE }}        # OIDC
-        aws-region: ${{ env.AWS_REGION }}
-    - name: Loging to ecr
-      uses: aws-actions/amazon-ecr-login@v1
-      id: ecr_login
-      name: Build tag and push image
-      id: build_and_push
-      run:
-          docker build -t ${{  steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{env.IMAGE_TAG }} .
-          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{env.IMAGE_TAG }}
+      - name: clone repo
+        uses: actions/checkout@v3
+      - name: Aws creds config 
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}     # OIDC
+          aws-region: ${{ env.AWS_REGION}}
+      - name: Loging to ecr 
+        uses: aws-actions/amazon-ecr-login@v1
+        id: ecr-login
+      - name: Build tag and push image 
+        id: build-and-push
+        run: |
+            docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}} .
+            docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
