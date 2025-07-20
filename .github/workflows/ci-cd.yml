@@ -15,6 +15,9 @@ env:
   AWS_ROLE: ${{ secrets.AWS_ACTION_ROLE }}
   ECR_REPO_NAME: dev
   IMAGE_TAG: ${{ github.run_number}}
+  TASK_DEFINITION: your-task-definition-name
+  ECS_CLUSTER: your-ecs-cluster-name
+  ECS_SERVICE: your-ecs-service-name
 
 
 jobs:
@@ -53,91 +56,71 @@ jobs:
         id: set-image
         run: echo "image=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}" >> $GITHUB_OUTPUT
 
-  deploy:
-    needs: build
+      - name: Post Fix Suggestions on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Use require() to import Node.js modules
+            const fs = require('fs');
+            
+            try {
+              // Read file synchronously (use async methods if preferred)
+              const fsReport = JSON.parse(fs.readFileSync('trivy-fs-results.json', 'utf8'));
+              const imageReport = JSON.parse(fs.readFileSync('trivy-image-results.json', 'utf8'));
+              
+              const formatVulns = (vulns) => vulns.map(v => `
+                **Package:** ${v.PkgName} (${v.InstalledVersion})  
+                **CVE:** ${v.VulnerabilityID} (${v.Severity})  
+                **Fix Version:** ${v.FixedVersion || 'None'}  
+                **Advisory:** ${v.PrimaryURL || 'N/A'}
+              `).join('\n');
+
+              const fsVulns = fsReport.Results?.flatMap(r => r.Vulnerabilities || []);
+              const imageVulns = imageReport.Results?.flatMap(r => r.Vulnerabilities || []);
+
+              let comment = '## 🔍 Trivy Security Report\n';
+              if (fsVulns.length > 0) comment += `### 📂 Filesystem Vulnerabilities\n${formatVulns(fsVulns)}\n`;
+              if (imageVulns.length > 0) comment += `### 🐳 Docker Image Vulnerabilities\n${formatVulns(imageVulns)}\n`;
+              if (fsVulns.length + imageVulns.length === 0) comment += '✅ No critical/high vulnerabilities found.';
+
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            } catch (error) {
+              core.error('Failed to process Trivy results: ' + error.message);
+            }
+  Deploy:
     runs-on: ubuntu-latest
-    env:
-      image: ${{ needs.build.outputs.image }} # Image URI from the build job
+    needs: build  # Depends on build job
     steps:
-      - name: Configure AWS credentials
+      - name: AWS Creds Config 
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.AWS_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Check for existing task definition
-        id: check-task
+      - name: Download current task definition
         run: |
-          if aws ecs describe-task-definition --task-definition nginx-task --query taskDefinition > task-definition.json 2>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            # Create a basic task definition template if it doesn't exist
-            echo '{
-              "family": "nginx-task",
-              "networkMode": "awsvpc",
-              "executionRoleArn": "arn:aws:iam::890742610542:role/ecsTaskExecutionRole",
-              "containerDefinitions": [
-                {
-                  "name": "nginx",
-                  "image": "$IMAGE_URI",
-                  "portMappings": [
-                    {
-                      "containerPort": 80,
-                      "hostPort": 80,
-                      "protocol": "tcp"
-                    }
-                  ],
-                  "essential": true
-                }
-              ],
-              "requiresCompatibilities": ["FARGATE"],
-              "cpu": "256",
-              "memory": "512"
-            }' > task-definition.json
-          fi
-
-      - name: Fill in the new image ID
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: nginx
-          image: ${{ env.image }}
-
-      - name: Deploy to ECS
-        if: github.ref == 'refs/heads/main'
+          aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION }} --query taskDefinition > task-definition.json
+      
+      - name: Update task definition with new ECR image
         run: |
-          # Register new task definition revision
-          aws ecs register-task-definition \
-            --cli-input-json file://${{ steps.task-def.outputs.task-definition }} \
-            --region ${{ env.AWS_REGION }}
-          
-          # Create or update service
-          if aws ecs describe-services --cluster nginx-cluster --services nginx-service --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
-            # Service exists - update it
-            aws ecs update-service \
-              --cluster nginx-cluster \
-              --service nginx-service \
-              --task-definition ${{ steps.task-def.outputs.task-definition }} \
-              --region ${{ env.AWS_REGION }}
-          else
-            # Service doesn't exist - create it
-            aws ecs create-service \
-              --cluster nginx-cluster \
-              --service-name nginx-service \
-              --task-definition ${{ steps.task-def.outputs.task-definition }} \
-              --launch-type FARGATE \
-              --desired-count 1 \
-              --network-configuration "awsvpcConfiguration={subnets=[subnet-12345678,subnet-87654321],securityGroups=[sg-12345678],assignPublicIp=ENABLED}" \
-              --region ${{ env.AWS_REGION }}
-          fi
-          
-          # Wait for service to stabilize
-          aws ecs wait services-stable \
-            --cluster nginx-cluster \
-            --service nginx-service \
-            --region ${{ env.AWS_REGION }}
+          jq --arg IMAGE_URI "${{ needs.build.outputs.image }}" '.containerDefinitions[0].image = $IMAGE_URI | 
+          del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .deregisteredAt)' task-definition.json > register-task-definition.json
+      
+      - name: Register new task definition
+        id: register-task-def
+        run: |
+          aws ecs register-task-definition --cli-input-json file://register-task-definition.json
+          NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION }} --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_DEFINITION=$NEW_TASK_DEFINITION" >> $GITHUB_ENV
+      
+      - name: Update ECS service
+        env:
+          NEW_TASK_DEFINITION: ${{ env.NEW_TASK_DEFINITION }}
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition $NEW_TASK_DEFINITION --force-new-deployment
