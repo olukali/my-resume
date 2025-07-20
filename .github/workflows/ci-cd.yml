@@ -20,6 +20,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest  # guthub runner
+    outputs:
+      image: ${{ steps.set-image.outputs.image }}
     steps:
       - name: clone repo
         uses: actions/checkout@v3
@@ -47,43 +49,95 @@ jobs:
       - name: Push image to ecr
         run: |
           docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}
-      - name: Store image in github env
-        run: echo "image=${{  steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}" >> $GITHUB_ENV
-  
+      - name: Set image output
+        id: set-image
+        run: echo "image=${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{env.IMAGE_TAG}}" >> $GITHUB_OUTPUT
+
   deploy:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - name: Configure AWS credentials
-          uses: aws-actions/configure-aws-credentials@v4
-          with:
-            role-to-assume: ${{ env.AWS_ROLE }}
-            aws-region: ${{ env.AWS_REGION }}
-        
-        - name: Login to Amazon ECR
-          uses: aws-actions/amazon-ecr-login@v1
-  
-        - name: Download task definition
-          run: |
-            aws ecs describe-task-definition --task-definition your-task-definition-name --query taskDefinition > task-definition.json
-  
-        - name: Fill in the new image ID
-          id: task-def
-          uses: aws-actions/amazon-ecs-render-task-definition@v1
-          with:
-            task-definition: task-definition.json
-            container-name: your-container-name
-            image: ${{ env.ECR_REPO_NAME }}:${{ env.IMAGE_TAG }}
-  
-        - name: Deploy to ECS
-          if: github.ref == 'refs/heads/main'  # Only deploy on push to main, not on PR
-          run: |
-            aws ecs register-task-definition \
-              --cli-input-json file://${{ steps.task-def.outputs.task-definition }} \
-              --region ${{ env.AWS_REGION }}
-            
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      image: ${{ needs.build.outputs.image }} # Image URI from the build job
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Check for existing task definition
+        id: check-task
+        run: |
+          if aws ecs describe-task-definition --task-definition nginx-task --query taskDefinition > task-definition.json 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            # Create a basic task definition template if it doesn't exist
+            echo '{
+              "family": "nginx-task",
+              "networkMode": "awsvpc",
+              "executionRoleArn": "arn:aws:iam::890742610542:role/ecsTaskExecutionRole",
+              "containerDefinitions": [
+                {
+                  "name": "nginx",
+                  "image": "$IMAGE_URI",
+                  "portMappings": [
+                    {
+                      "containerPort": 80,
+                      "hostPort": 80,
+                      "protocol": "tcp"
+                    }
+                  ],
+                  "essential": true
+                }
+              ],
+              "requiresCompatibilities": ["FARGATE"],
+              "cpu": "256",
+              "memory": "512"
+            }' > task-definition.json
+          fi
+
+      - name: Fill in the new image ID
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: nginx
+          image: ${{ env.image }}
+
+      - name: Deploy to ECS
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Register new task definition revision
+          aws ecs register-task-definition \
+            --cli-input-json file://${{ steps.task-def.outputs.task-definition }} \
+            --region ${{ env.AWS_REGION }}
+          
+          # Create or update service
+          if aws ecs describe-services --cluster nginx-cluster --services nginx-service --region ${{ env.AWS_REGION }} >/dev/null 2>&1; then
+            # Service exists - update it
             aws ecs update-service \
-              --cluster your-cluster-name \
-              --service your-service-name \
+              --cluster nginx-cluster \
+              --service nginx-service \
               --task-definition ${{ steps.task-def.outputs.task-definition }} \
               --region ${{ env.AWS_REGION }}
+          else
+            # Service doesn't exist - create it
+            aws ecs create-service \
+              --cluster nginx-cluster \
+              --service-name nginx-service \
+              --task-definition ${{ steps.task-def.outputs.task-definition }} \
+              --launch-type FARGATE \
+              --desired-count 1 \
+              --network-configuration "awsvpcConfiguration={subnets=[subnet-12345678,subnet-87654321],securityGroups=[sg-12345678],assignPublicIp=ENABLED}" \
+              --region ${{ env.AWS_REGION }}
+          fi
+          
+          # Wait for service to stabilize
+          aws ecs wait services-stable \
+            --cluster nginx-cluster \
+            --service nginx-service \
+            --region ${{ env.AWS_REGION }}
