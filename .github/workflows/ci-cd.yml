@@ -72,28 +72,7 @@ jobs:
         run: |
           IMAGE_URI="${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{ env.IMAGE_TAG }}"
           echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-      - name: Post Fix Suggestions on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // Use require() to import Node.js modules
-            const fs = require('fs');
-            
-            try {
-              // Read file synchronously (use async methods if preferred)
-              const fsReport = JSON.parse(fs.readFileSync('trivy-fs-results.json', 'utf8'));
-              const imageReport = JSON.parse(fs.readFileSync('trivy-image-results.json', 'utf8'));
-              
-              const formatVulns = (vulns) => vulns.map(v => `
-                **Package:** ${v.PkgName} (${v.InstalledVersion})  
-                **CVE:** ${v.VulnerabilityID} (${v.Severity})  
-                **Fix Version:** ${v.FixedVersion || 'None'}  
-                **Advisory:** ${v.PrimaryURL || 'N/A'}
-              `).join('\n');
-
-
-
+      
       - name: Post Fix Suggestions on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
