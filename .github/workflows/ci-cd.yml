@@ -73,7 +73,7 @@ jobs:
           with:
             task-definition: task-definition.json
             container-name: your-container-name
-            image: ${{ env.image }}
+            image: ${{ env.ECR_REPO_NAME }}:${{ env.IMAGE_TAG }}
   
         - name: Deploy to ECS
           if: github.ref == 'refs/heads/main'  # Only deploy on push to main, not on PR
@@ -85,5 +85,5 @@ jobs:
             aws ecs update-service \
               --cluster your-cluster-name \
               --service your-service-name \
-              --task-definition ${{ steps.task-def.outputs.task-definition-arn }} \
+              --task-definition ${{ steps.task-def.outputs.task-definition }} \
               --region ${{ env.AWS_REGION }}
