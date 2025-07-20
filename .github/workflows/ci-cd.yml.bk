@@ -1,0 +1,74 @@
+name: Build, Push, and Deploy Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  id-token: write 
+  contents: read
+  pull-requests: write 
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ROLE: ${{ secrets.AWS_ACTION_ROLE }}
+  ECR_REPO_NAME: dev
+  IMAGE_TAG: ${{ github.run_number }}
+  TASK_DEFINITION: nginx-task
+  ECS_CLUSTER: nginx-cluster
+  ECS_SERVICE: nginx-service
+  CONTAINER_NAME: nginx
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    outputs:  # Define outputs for the Deploy job
+      image-uri: ${{ steps.set-image.outputs.image-uri }}
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@v3
+      
+      - name: AWS Creds Config 
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to ECR 
+        uses: aws-actions/amazon-ecr-login@v1
+        id: ecr-login
+      - name: FS Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'  
+          format: 'json'
+          output: "trivy-fs-results.json"
+          exit-code: '0'  
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true  
+
+      - name: Build and tag image 
+        run: |
+          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{ env.IMAGE_TAG }} .
+      
+      - name: Scan Docker Image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{ env.IMAGE_TAG }}"
+          format: "json"
+          exit-code: "0"
+          output: "trivy-image-results.json"
+          severity: "CRITICAL,HIGH"
+      
+      - name: Push image to ECR
+        run: |
+          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{ env.IMAGE_TAG }}
+      
+      - name: Store image URI for Deploy job
+        id: set-image
+        run: |
+          IMAGE_URI="${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPO_NAME}}:${{ env.IMAGE_TAG }}"
+          echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
